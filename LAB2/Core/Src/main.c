@@ -43,7 +43,12 @@
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
+int led_buffer[4] = {1, 2, 3, 0};
+int index_led = 0;
 
+// Các biến đếm th�?i gian cho ngắt Timer 10ms
+int timer_led_scan = 50;  // 50 * 10ms = 500ms (chuyển LED 7 đoạn)
+int timer_dot_blink = 100; // 100 * 10ms = 1000ms (1 giây nhấp nháy DOT)
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -51,7 +56,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-
+void display7SEG(int num);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -197,46 +202,109 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
+                          |GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4
-                          |GPIO_PIN_5|GPIO_PIN_6, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PA5 PA6 PA7 */
-  GPIO_InitStruct.Pin = GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7;
+  /*Configure GPIO pins : PA4 PA5 PA6 PA7
+                           PA8 PA9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
+                          |GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB2 PB3 PB4
-                           PB5 PB6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4
-                          |GPIO_PIN_5|GPIO_PIN_6;
+  /*Configure GPIO pins : PB0 PB1 PB2 PB3
+                           PB4 PB5 PB6 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : PB1 */
-  GPIO_InitStruct.Pin = GPIO_PIN_1;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
-
 }
 
 /* USER CODE BEGIN 4 */
-	int counter = 100;
- void HAL_TIM_PeriodElapsedCallback ( TIM_HandleTypeDef * htim )
-{
- counter--;
- if( counter <= 0) {
- counter = 100;
- HAL_GPIO_TogglePin ( GPIOA , GPIO_PIN_5 ) ;
- 	 }
- }
+void display7SEG(int num) {
+    unsigned char seg_code[10] = {
+        0x40, // 0
+        0x79, // 1
+        0x24, // 2
+        0x30, // 3
+        0x19, // 4
+        0x12, // 5
+        0x02, // 6
+        0x78, // 7
+        0x00, // 8
+        0x10  // 9
+    };
+
+    if (num >= 0 && num <= 9) {
+        unsigned char code = seg_code[num];
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, (code & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, (code & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, (code & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, (code & 0x08) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, (code & 0x10) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, (code & 0x20) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, (code & 0x40) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    }
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM2) {
+
+        // ----------------------------------------------------
+        // 1. CHỨC NĂNG NHẤP NH�?Y LED DOT (PA4) MỖI 1 GIÂY
+        // ----------------------------------------------------
+        timer_dot_blink--;
+        if (timer_dot_blink <= 0) {
+            timer_dot_blink = 100; // Reset đếm 1000ms
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4); // Đảo trạng thái 2 LED DOT
+        }
+
+        // ----------------------------------------------------
+        // 2. CHỨC NĂNG QUÉT 4 LED 7 ĐOẠN MỖI 500MS
+        // ----------------------------------------------------
+        timer_led_scan--;
+        if (timer_led_scan <= 0) {
+            timer_led_scan = 50; // Reset đếm 500ms
+
+            // Tắt tất cả 4 Transistor trước khi xuất dữ liệu mới (Tắt nguồn PA9, PA6, PA7, PA8)
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9 | GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8, GPIO_PIN_SET);
+
+            // Xuất dữ liệu số cần hiển thị ra PB0-PB6
+            display7SEG(led_buffer[index_led]);
+
+            // Bật duy nhất Transistor của LED tương ứng (Xuất mức LOW)
+            switch (index_led) {
+                case 0:
+                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // Bật LED 1 (Hiển thị số 1)
+                    break;
+                case 1:
+                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // Bật LED 2 (Hiển thị số 2)
+                    break;
+                case 2:
+                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // Bật LED 3 (Hiển thị số 3)
+                    break;
+                case 3:
+                    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET); // Bật LED 4 (Hiển thị số 0)
+                    break;
+            }
+
+            // Chuyển sang LED tiếp theo (0 -> 1 -> 2 -> 3 -> 0)
+            index_led++;
+            if (index_led >= 4) {
+                index_led = 0;
+            }
+        }
+    }
+}
 /* USER CODE END 4 */
 
 /**
