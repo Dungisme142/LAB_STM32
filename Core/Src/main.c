@@ -156,8 +156,8 @@ int main(void)
       setNumberOnClock(minute_pos);
       setNumberOnClock(second_pos);
 
-
-      HAL_Delay(20);
+      // Dừng 1 giây
+      HAL_Delay(1000);
 
       // Tăng dần
       second++;
