@@ -43,7 +43,11 @@
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
+int led_buffer[4] = {1, 2, 3, 4}; // Mảng đệm chứa 4 giá trị hiển thị
+int index_led = 0;                 // Biến chỉ số LED hiện tại (0 -> 3)
 
+int timer_led_scan = 50;           // Đếm thời gian quét LED (500ms)
+int timer_dot_blink = 100;         // Đếm thời gian chớp tắt DOT (1000ms)
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -51,7 +55,8 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-
+void display7SEG(int num);
+void update7SEG(int index);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -225,15 +230,89 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-int counter = 100;
- void HAL_TIM_PeriodElapsedCallback ( TIM_HandleTypeDef * htim )
-{
- counter--;
- if( counter <= 0) {
- counter = 100;
- HAL_GPIO_TogglePin ( GPIOA , GPIO_PIN_5 ) ;
- 	 }
- }
+void display7SEG(int num) {
+    unsigned char seg_code[10] = {
+        0x40, // 0
+        0x79, // 1
+        0x24, // 2
+        0x30, // 3
+        0x19, // 4
+        0x12, // 5
+        0x02, // 6
+        0x78, // 7
+        0x00, // 8
+        0x10  // 9
+    };
+
+    if (num >= 0 && num <= 9) {
+        unsigned char code = seg_code[num];
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, (code & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, (code & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, (code & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, (code & 0x08) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, (code & 0x10) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, (code & 0x20) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, (code & 0x40) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    }
+}
+
+void update7SEG(int index) {
+    // Tắt tất cả các LED trước để tránh hiện tượng lem màu/sáng mờ (PA9, PA6, PA7, PA8 = 1)
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9 | GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8, GPIO_PIN_SET);
+
+    // Bật LED tương ứng với index và hiển thị giá trị led_buffer[index]
+    switch (index) {
+        case 0:
+            // Hiển thị phần tử thứ 0
+            display7SEG(led_buffer[0]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // Bật LED 1 (PA5 = 0)
+            break;
+        case 1:
+            // Hiển thị phần tử thứ 1
+            display7SEG(led_buffer[1]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // Bật LED 2 (PA6 = 0)
+            break;
+        case 2:
+            // Hiển thị phần tử thứ 2
+            display7SEG(led_buffer[2]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // Bật LED 3 (PA7 = 0)
+            break;
+        case 3:
+            // Hiển thị phần tử thứ 3
+            display7SEG(led_buffer[3]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET); // Bật LED 4 (PA8 = 0)
+            break;
+        default:
+            break;
+    }
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM2) {
+
+        // 1. Nhấp nháy 2 LED DOT (PA4) mỗi 1s
+        timer_dot_blink--;
+        if (timer_dot_blink <= 0) {
+            timer_dot_blink = 100;
+            HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+        }
+
+        // 2. Gọi update7SEG() chuyển quét LED mỗi 500ms
+        timer_led_scan--;
+        if (timer_led_scan <= 0) {
+            timer_led_scan = 50;
+
+            // Gọi hàm cập nhật hiển thị theo vị trí index_led
+            update7SEG(index_led);
+
+            // Tăng chỉ số LED lên 1, nếu vượt quá 3 thì quay lại 0
+            index_led++;
+            if (index_led >= 4) {
+                index_led = 0;
+            }
+        }
+    }
+}
 /* USER CODE END 4 */
 
 /**
