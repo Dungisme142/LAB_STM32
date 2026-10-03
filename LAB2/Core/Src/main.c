@@ -46,7 +46,7 @@ TIM_HandleTypeDef htim2;
 int led_buffer[4] = {1, 2, 3, 4}; // Mảng đệm chứa 4 giá trị hiển thị
 int index_led = 0;                 // Biến chỉ số LED hiện tại (0 -> 3)
 
-int timer_led_scan = 50;           // Đếm thời gian quét LED (500ms)
+int timer_led_scan = 25;           // Đếm thời gian quét LED (500ms)
 int timer_dot_blink = 100;         // Đếm thời gian chớp tắt DOT (1000ms)
 /* USER CODE END PV */
 
@@ -300,7 +300,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         // 2. Gọi update7SEG() chuyển quét LED mỗi 500ms
         timer_led_scan--;
         if (timer_led_scan <= 0) {
-            timer_led_scan = 50;
+            timer_led_scan = 25;
 
             // Gọi hàm cập nhật hiển thị theo vị trí index_led
             update7SEG(index_led);
