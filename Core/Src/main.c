@@ -89,13 +89,89 @@ int main(void)
 //  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
 //  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
   /* USER CODE END 2 */
+  // 1. Định nghĩa struct chứa thông tin Chân và Port GPIO
+  typedef struct {
+      GPIO_TypeDef* port;
+      uint16_t pin;
+  } LED_Clock;
 
+  // 2. Khai báo mảng 12 LED đồng hồ dùng chung từ PA4 đến PA15
+  static const LED_Clock clock_leds[12] = {
+      {GPIOA, GPIO_PIN_6},   // Vị trí 0
+      {GPIOA, GPIO_PIN_7},   // Vị trí 1
+      {GPIOA, GPIO_PIN_4},   // Vị trí 2
+	  {GPIOA, GPIO_PIN_8},   // Vị trí 3
+      {GPIOA, GPIO_PIN_9},   // Vị trí 4
+      {GPIOA, GPIO_PIN_10},  // Vị trí 5
+      {GPIOA, GPIO_PIN_11},  // Vị trí 6
+      {GPIOA, GPIO_PIN_12},  // Vị trí 7
+      {GPIOA, GPIO_PIN_14},  // Vị trí 8
+      {GPIOA, GPIO_PIN_13},  // Vị trí 9
+      {GPIOA, GPIO_PIN_15},   // Vị trí 10
+      {GPIOA, GPIO_PIN_5}    // Vị trí 11
+  };
+  /* USER CODE BEGIN PFP */
+  // Exercise 7: Tắt toàn bộ 12 LED đồng hồ
+  void clearAllClock(void) {
+      for (int i = 0; i < 12; i++) {
+          // Xuất mức HIGH (SET) để TẮT LED (mạch Active Low)
+          HAL_GPIO_WritePin(clock_leds[i].port, clock_leds[i].pin, GPIO_PIN_RESET);
+      }
+  }
+
+  // Exercise 8: Bật 1 LED tại vị trí num (từ 0 đến 11)
+  void setNumberOnClock(int num) {
+      if (num >= 0 && num <= 11) {
+          // Xuất mức HIGH
+          HAL_GPIO_WritePin(clock_leds[num].port, clock_leds[num].pin, GPIO_PIN_SET);
+      }
+  }
+
+  // Exercise 9: Tắt 1 LED tại vị trí num (từ 0 đến 11)
+  void clearNumberOnClock(int num) {
+      if (num >= 0 && num <= 11) {
+          // Xuất mức HIGH (SET) để TẮT LED
+          HAL_GPIO_WritePin(clock_leds[num].port, clock_leds[num].pin, GPIO_PIN_RESET);
+      }
+  }
+  /* USER CODE END PFP */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  int hour = 0;
+  int minute = 0;
+  int second = 0;
   while (1)
   {
     /* USER CODE END WHILE */
-	     
+	     //Xóa toàn bộ LED trước
+      clearAllClock();
+
+      // Tính toán vị trí LED từ 0 đến 11
+      int hour_pos   = hour % 12;      // 10 giờ -> LED vị trí 10 (PA14)
+      int minute_pos = minute / 5;     // 10 phút -> LED vị trí 2 (PA6)
+      int second_pos = second / 5;     // 0 giây -> LED vị trí 0 (PA4)
+
+      // Bật 3 LED tương ứng Giờ, Phút, Giây
+      setNumberOnClock(hour_pos);
+      setNumberOnClock(minute_pos);
+      setNumberOnClock(second_pos);
+
+
+      HAL_Delay(20);
+
+      // Tăng dần
+      second++;
+      if (second >= 60) {
+          second = 0;
+          minute++;
+          if (minute >= 60) {
+              minute = 0;
+              hour++;
+              if (hour >= 12) {
+                  hour = 0;
+              }
+          }
+      }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -167,6 +243,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+// Exercise 7: Tắt toàn bộ 12 LED đồng hồ
 
 /* USER CODE END 4 */
 
