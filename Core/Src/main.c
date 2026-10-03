@@ -86,8 +86,8 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-//  HAL_GPIO_WritePin(LED_RED_GPIO_Port, LED_RED_Pin, GPIO_PIN_SET);
-//  HAL_GPIO_WritePin(LED_YELLOW_GPIO_Port, LED_YELLOW_Pin, GPIO_PIN_RESET);
+//  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
+//  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -95,23 +95,7 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-	      // --- 1. BẬT ĐÈN ĐỎ (5 GIÂY) ---
-	      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // RED ON (Mức 0)
-	      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);   // YELLOW OFF (Mức 1)
-	      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);   // GREEN OFF (Mức 1)
-	      HAL_Delay(5000); // Chờ 5 giây
-
-	      // --- 2. BẬT ĐÈN VÀNG (2 GIÂY) ---
-	      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // RED OFF
-	      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // YELLOW ON
-	      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);   // GREEN OFF
-	      HAL_Delay(2000); // Chờ 2 giây
-
-	      // --- 3. BẬT ĐÈN XANH (3 GIÂY) ---
-	      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // RED OFF
-	      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);   // YELLOW OFF
-	      HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // GREEN ON
-	      HAL_Delay(3000); // Chờ 3 giây
+	     
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
