@@ -147,9 +147,9 @@ int main(void)
       clearAllClock();
 
       // Tính toán vị trí LED từ 0 đến 11
-      int hour_pos   = hour % 12;      // 10 giờ -> LED vị trí 10 (PA14)
-      int minute_pos = minute / 5;     // 10 phút -> LED vị trí 2 (PA6)
-      int second_pos = second / 5;     // 0 giây -> LED vị trí 0 (PA4)
+      int hour_pos   = hour % 12;
+      int minute_pos = minute % 12 ;
+      int second_pos = second % 12 ;
 
       // Bật 3 LED tương ứng Giờ, Phút, Giây
       setNumberOnClock(hour_pos);
