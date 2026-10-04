@@ -48,6 +48,8 @@ int timer_counter[MAX_TIMERS] = {0};
 int timer_flag[MAX_TIMERS] = {0};
 
 int led_buffer[4] = {1, 2, 3, 4};
+int data_array[10] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+int shift_index = 0; // Biến vị trí bắt đầu lấy dữ liệu
 int index_led = 0;
 /* USER CODE END PV */
 
@@ -98,12 +100,13 @@ int main(void)
   void timerRun(void);
   void display7SEG(int num);
   void update7SEG(int index);
-
+  void shiftLeft(void);
+  void shiftRight(void);
   HAL_TIM_Base_Start_IT (& htim2 ) ;
+  setTimer(0, 25); // Đếm 250ms
+  setTimer(1, 100); // Đếm 1 giây
 
-  setTimer(0, 100); // Đếm 1 giây
 
-  setTimer(1, 25); // Đếm 250ms
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -111,22 +114,22 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-    // 1. DOT nhấp nháy LED : Software timer
-    if(timer_flag[0] == 1){
-      setTimer(0, 100); // Set lại chu kì 1 giây
-      HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
-    }
     
+    
+
     // 2. LED 7 đoạn : Software timer
-    if(timer_flag[1] == 1){
-      setTimer(1 , 25); // Set lại chu kì 250ms
+    if(timer_flag[0] == 1){
+      setTimer(0 , 25); // Set lại chu kì 250ms
   
       update7SEG(index_led);
       index_led++;
       if(index_led >= 4) index_led = 0;
     }
-    
-    
+    // 1. Dịch trái hoặc phải : Software timer
+    if(timer_flag[1] == 1){
+      setTimer(1, 100); // Set lại chu kì 1 giây
+      shiftRight();
+    }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -254,7 +257,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-// 1. Hàm cấu hình thời gian
+// Hàm cấu hình thời gian
 void setTimer(int index, int duration){
   if(index >= 0 && index < MAX_TIMERS){
     timer_counter[index] = duration;
@@ -271,7 +274,32 @@ void timerRun(void){
     }
   }
 }
-// 3. Hàm xuất mã 7 đoạn ra PB0 - PB6
+// Hàm dịch trái (Shift Left): Dịch chuyển dữ liệu từ phải sang trái
+void shiftLeft(void) {
+    // Cách 1: Dịch dựa trên mảng cố định data_array
+    shift_index = (shift_index + 1) % 10;
+    for (int i = 0; i < 4; i++) {
+        led_buffer[i] = data_array[(shift_index + i) % 10];
+    }
+}
+
+// Hàm dịch phải (Shift Right): Dịch chuyển dữ liệu từ trái sang phải
+void shiftRight(void) {
+    // Dịch xoay vòng các phần tử trực tiếp trong led_buffer
+    int temp_buffer[4];
+
+    // 1. Tính toán trạng thái mới vào mảng tạm
+    temp_buffer[0] = led_buffer[3];
+    temp_buffer[1] = led_buffer[0];
+    temp_buffer[2] = led_buffer[1];
+    temp_buffer[3] = led_buffer[2];
+
+    // 2. Cập nhật cực nhanh sang led_buffer
+    for (int i = 0; i < 4; i++) {
+        led_buffer[i] = temp_buffer[i];
+    }
+}
+// Hàm xuất mã 7 đoạn ra PB0 - PB6
 void display7SEG(int num) {
     unsigned char seg_code[10] = {
         0x40, 0x79, 0x24, 0x30, 0x19,
@@ -290,7 +318,7 @@ void display7SEG(int num) {
     }
 }
 
-// 4. Hàm cập nhật 7 đoạn (PA6 - PA9)
+// Hàm cập nhật 7 đoạn (PA6 - PA9)
 void update7SEG(int index) {
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_SET);
 
