@@ -32,6 +32,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define MAX_TIMERS 2
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -43,7 +44,11 @@
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
+int timer_counter[MAX_TIMERS] = {0};
+int timer_flag[MAX_TIMERS] = {0};
 
+int led_buffer[4] = {1, 2, 3, 4};
+int index_led = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -89,7 +94,16 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
+  void setTimer(int index, int duration);
+  void timerRun(void);
+  void display7SEG(int num);
+  void update7SEG(int index);
+
   HAL_TIM_Base_Start_IT (& htim2 ) ;
+
+  setTimer(0, 100); // Đếm 1 giây
+
+  setTimer(1, 25); // Đếm 250ms
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -97,7 +111,22 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+    // 1. DOT nhấp nháy LED : Software timer
+    if(timer_flag[0] == 1){
+      setTimer(0, 100); // Set lại chu kì 1 giây
+      HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+    }
+    
+    // 2. LED 7 đoạn : Software timer
+    if(timer_flag[1] == 1){
+      setTimer(1 , 25); // Set lại chu kì 250ms
+  
+      update7SEG(index_led);
+      index_led++;
+      if(index_led >= 4) index_led = 0;
+    }
+    
+    
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -225,14 +254,76 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-int counter = 100;
+// 1. Hàm cấu hình thời gian
+void setTimer(int index, int duration){
+  if(index >= 0 && index < MAX_TIMERS){
+    timer_counter[index] = duration;
+    timer_flag[index] = 0;
+  }
+}
+void timerRun(void){
+  for(int i = 0; i < MAX_TIMERS; i++){
+    if(timer_counter[i] > 0 ){
+      timer_counter[i]--;
+      if(timer_counter[i] <= 0){
+        timer_flag[i] = 1; // co bao het thoi gian
+      }
+    }
+  }
+}
+// 3. Hàm xuất mã 7 đoạn ra PB0 - PB6
+void display7SEG(int num) {
+    unsigned char seg_code[10] = {
+        0x40, 0x79, 0x24, 0x30, 0x19,
+        0x12, 0x02, 0x78, 0x00, 0x10
+    };
+
+    if (num >= 0 && num <= 9) {
+        unsigned char code = seg_code[num];
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, (code & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, (code & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, (code & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, (code & 0x08) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, (code & 0x10) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, (code & 0x20) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, (code & 0x40) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    }
+}
+
+// 4. Hàm cập nhật 7 đoạn (PA6 - PA9)
+void update7SEG(int index) {
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_SET);
+
+    switch (index) {
+        case 0:
+            display7SEG(led_buffer[0]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
+            break;
+        case 1:
+            display7SEG(led_buffer[1]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET);
+            break;
+        case 2:
+            display7SEG(led_buffer[2]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET);
+            break;
+        case 3:
+            display7SEG(led_buffer[3]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET);
+            break;
+        default:
+            break;
+    }
+}
+
+
+
+
  void HAL_TIM_PeriodElapsedCallback ( TIM_HandleTypeDef * htim )
 {
- counter--;
- if( counter <= 0) {
- counter = 100;
- HAL_GPIO_TogglePin ( GPIOA , GPIO_PIN_5 ) ;
- 	 }
+  if(htim->Instance == TIM2){
+    timerRun();
+  }
  }
 /* USER CODE END 4 */
 
