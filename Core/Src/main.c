@@ -100,7 +100,7 @@ int main(void)
       {GPIOA, GPIO_PIN_6},   // Vị trí 0
       {GPIOA, GPIO_PIN_7},   // Vị trí 1
       {GPIOA, GPIO_PIN_4},   // Vị trí 2
-	  {GPIOA, GPIO_PIN_8},   // Vị trí 3
+	    {GPIOA, GPIO_PIN_8},   // Vị trí 3
       {GPIOA, GPIO_PIN_9},   // Vị trí 4
       {GPIOA, GPIO_PIN_10},  // Vị trí 5
       {GPIOA, GPIO_PIN_11},  // Vị trí 6
@@ -148,8 +148,8 @@ int main(void)
 
       // Tính toán vị trí LED từ 0 đến 11
       int hour_pos   = hour % 12;
-      int minute_pos = minute % 12 ;
-      int second_pos = second % 12 ;
+      int minute_pos = minute / 5 ;
+      int second_pos = second / 5 ;
 
       // Bật 3 LED tương ứng Giờ, Phút, Giây
       setNumberOnClock(hour_pos);
