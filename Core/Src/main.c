@@ -27,7 +27,9 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+  #define STATE_RED    0
+  #define STATE_YELLOW 1
+  #define STATE_GREEN  2
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -86,24 +88,126 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   /* USER CODE BEGIN 2 */
-//  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);
-//  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET);
-  /* USER CODE END 2 */
-  void display7SEG(int num);
-    /* Infinite loop */
-    /* USER CODE BEGIN WHILE */
-    int counter = 9;
+  void display7SEG_Horizontal(int num);
+  void display7SEG_Vertical(int num);
+
+  int vert_status = STATE_RED; // Xuất phát: Đỏ 5 giây
+  int count_vert = 5;
+
+  // --- TRẠNG THÁI VÀ BIẾN ĐẾM HƯỚNG NGANG (HORIZONTAL) ---
+  int horiz_status = STATE_GREEN; // Xuất phát: Xanh 3 giây
+  int count_horiz = 3;
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
     while (1)
     {
-      /* USER CODE END WHILE */
-  	  if (counter == -1) counter = 9; // Reset đếm về 0 khi vượt quá 9
+    /* USER CODE END WHILE */
+      // 1. MÁY TRẠNG THÁI ĐIỀU KHIỂN HƯỚNG DỌC (VERTICAL FSM) - ACTIVE HIGH
+      // =========================================================================
+      switch (vert_status) {
+          case STATE_RED:
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // RED ON
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // YELLOW OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // GREEN OFF
+              break;
 
-        display7SEG(counter); // Hiển thị số và tăng giá trị đếm
-        counter--;
-        HAL_Delay(1000);
-            /* USER CODE BEGIN 3 */
+          case STATE_YELLOW:
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // RED OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);   // YELLOW ON
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // GREEN OFF
+              break;
+
+          case STATE_GREEN:
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // RED OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // YELLOW OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);   // GREEN ON
+              break;
+      }
+
+      // =========================================================================
+      // 2. MÁY TRẠNG THÁI ĐIỀU KHIỂN HƯỚNG NGANG (HORIZONTAL FSM) - ACTIVE HIGH
+      // =========================================================================
+      switch (horiz_status) {
+          case STATE_RED:
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);   // RED ON
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // YELLOW OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET); // GREEN OFF
+              break;
+
+          case STATE_YELLOW:
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // RED OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);   // YELLOW ON
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET); // GREEN OFF
+              break;
+
+          case STATE_GREEN:
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // RED OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // YELLOW OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);   // GREEN ON
+              break;
+      }
+
+      // =========================================================================
+      // 3. HIỂN THỊ ĐẾM NGƯỢC LÊN 2 LED 7 ĐOẠN
+      // =========================================================================
+      display7SEG_Vertical(count_vert);
+      display7SEG_Horizontal(count_horiz);
+
+      // =========================================================================
+      // 4. ĐỘ TRỄ 1 GIÂY DUY NHẤT (HEARTBEAT)
+      // =========================================================================
+      HAL_Delay(1000);
+
+      // =========================================================================
+      // 5. CẬP NHẬT BIẾN ĐẾM VÀ CHUYỂN TRẠNG THÁI ĐỘC LẬP TỪNG HƯỚNG
+      // =========================================================================
+
+      // --- Giảm đếm ngược mỗi giây ---
+      count_vert--;
+      count_horiz--;
+
+      // --- Chuyển trạng thái Độc Lập cho Hướng Dọc: RED(5s) -> YELLOW(2s) -> GREEN(3s) ---
+      if (count_vert <= 0) {
+          switch (vert_status) {
+              case STATE_RED:      // Hết Đỏ 5s -> Sang Vàng 2s
+                  vert_status = STATE_YELLOW;
+                  count_vert = 2;
+                  break;
+
+              case STATE_YELLOW:   // Hết Vàng 2s -> Sang Xanh 3s
+                  vert_status = STATE_GREEN;
+                  count_vert = 3;
+                  break;
+
+              case STATE_GREEN:    // Hết Xanh 3s -> Sang Đỏ 5s
+                  vert_status = STATE_RED;
+                  count_vert = 5;
+                  break;
+          }
+      }
+
+      // --- Chuyển trạng thái Độc Lập cho Hướng Ngang: GREEN(3s) -> YELLOW(2s) -> RED(5s) ---
+      if (count_horiz <= 0) {
+          switch (horiz_status) {
+              case STATE_GREEN:    // Hết Xanh 3s -> Sang Vàng 2s
+                  horiz_status = STATE_YELLOW;
+                  count_horiz = 2;
+                  break;
+
+              case STATE_YELLOW:   // Hết Vàng 2s -> Sang Đỏ 5s
+                  horiz_status = STATE_RED;
+                  count_horiz = 5;
+                  break;
+
+              case STATE_RED:      // Hết Đỏ 5s -> Sang Xanh 3s
+                  horiz_status = STATE_GREEN;
+                  count_horiz = 3;
+                  break;
+          }
+      }
+    /* USER CODE BEGIN 3 */
     }
-    /* USER CODE END 3 */
+  /* USER CODE END 3 */
 }
 
 /**
@@ -160,8 +264,10 @@ static void MX_GPIO_Init(void)
                           |GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
+                          |GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PA4 LED_RED_Pin LED_YELLOW_Pin LED_GREEN_Pin
                            PA8 PA9 PA10 PA11
@@ -174,10 +280,14 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB1 PB2 PB3
-                           PB4 PB5 PB6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
+  /*Configure GPIO pins : PB0 PB1 PB2 PB10
+                           PB11 PB12 PB13 PB3
+                           PB4 PB5 PB6 PB7
+                           PB8 PB9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
+                          |GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -186,33 +296,28 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void display7SEG(int num) {
-    // Mảng lưu giá trị mã HEX tương ứng từ 0 đến 9
-    unsigned char seg_code[10] = {
-        0x40, // 0
-        0x79, // 1
-        0x24, // 2
-        0x30, // 3
-        0x19, // 4
-        0x12, // 5
-        0x02, // 6
-        0x78, // 7
-        0x00, // 8
-        0x10  // 9
-    };
+unsigned char seg_code[10] = {
+    0x40, 0x79, 0x24, 0x30, 0x19, 
+    0x12, 0x02, 0x78, 0x00, 0x10
+};
 
-    // Kiểm tra giới hạn đầu vào hợp lệ từ 0 đến 9
+// 1. Hiển thị đếm ngược cho Hướng D�?c (LED trên: PB0 - PB6)
+void display7SEG_Vertical(int num) {
     if (num >= 0 && num <= 9) {
         unsigned char code = seg_code[num];
-        
-        // Xuất giá trị từng bit ra từng chân GPIO từ PB0 đến PB6
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, (code & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, (code & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, (code & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, (code & 0x08) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, (code & 0x10) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, (code & 0x20) ? GPIO_PIN_SET : GPIO_PIN_RESET);
-        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, (code & 0x40) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        for (int i = 0; i < 7; i++) {
+            HAL_GPIO_WritePin(GPIOB, (GPIO_PIN_0 << i), (code & (1 << i)) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        }
+    }
+}
+
+// 2. Hiển thị đếm ngược cho Hướng Ngang (LED dưới: PB7 - PB13)
+void display7SEG_Horizontal(int num) {
+    if (num >= 0 && num <= 9) {
+        unsigned char code = seg_code[num];
+        for (int i = 0; i < 7; i++) {
+            HAL_GPIO_WritePin(GPIOB, (GPIO_PIN_7 << i), (code & (1 << i)) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        }
     }
 }
 /* USER CODE END 4 */
