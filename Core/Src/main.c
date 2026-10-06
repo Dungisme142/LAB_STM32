@@ -92,26 +92,54 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  int count = 5; // Khởi tạo đếm ngược cho đèn Đỏ (5 giây)
+  int status = 0; // 0: RED, 1: YELLOW, 2: GREEN
   while (1)
   {
     /* USER CODE END WHILE */
-	  // --- 1. BẬT ĐÈN ĐỎ (5 GIÂY) ---
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // RED ON (Mức 0)
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);   // YELLOW OFF (Mức 1)
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);   // GREEN OFF (Mức 1)
-    HAL_Delay(5000); // Chờ 5 giây
+	  switch (status) {
+        case 0: // ĐÈN ĐỎ
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // RED ON
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);   // YELLOW OFF
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);   // GREEN OFF
+            break;
 
-    // --- 2. BẬT ĐÈN VÀNG (2 GIÂY) ---
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // RED OFF
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // YELLOW ON
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);   // GREEN OFF
-    HAL_Delay(2000); // Chờ 2 giây
+        case 1: // ĐÈN VÀNG
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // RED OFF
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // YELLOW ON
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);   // GREEN OFF
+            break;
 
-    // --- 3. BẬT ĐÈN XANH (3 GIÂY) ---
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // RED OFF
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);   // YELLOW OFF
-    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // GREEN ON
-    HAL_Delay(3000); // Chờ 3 giây
+        case 2: // ĐÈN XANH
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // RED OFF
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);   // YELLOW OFF
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // GREEN ON
+            break;
+    }
+
+    // --- 2. TẠO TRỄ DUY NHẤT 1 GIÂY ---
+    HAL_Delay(1000);
+
+    // --- 3. ĐẾM NGƯỢC VÀ CHUYỂN TRẠNG THÁI ---
+    count--;
+    if (count <= 0) {
+        switch (status) {
+            case 0: // Đang Đỏ -> Chuyển sang Vàng (2 giây)
+                status = 1;
+                count = 2;
+                break;
+
+            case 1: // Đang Vàng -> Chuyển sang Xanh (3 giây)
+                status = 2;
+                count = 3;
+                break;
+
+            case 2: // Đang Xanh -> Chuyển về Đỏ (5 giây)
+                status = 0;
+                count = 5;
+                break;
+        }
+    }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
