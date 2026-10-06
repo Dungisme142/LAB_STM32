@@ -43,7 +43,34 @@
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
+// Dữ liệu hình ảnh hiển thị trên Matrix 8x8 (Ví dụ: Chữ 'A' hoặc hình trái tim)
+uint8_t matrix_buffer[8] = {
+    0x18, // ROW0
+    0x3C, // ROW1
+    0x66, // ROW2
+    0x66, // ROW3
+    0x7E, // ROW4
+    0x66, // ROW5
+    0x66, // ROW6
+    0x00  // ROW7
+};
 
+int index_matrix = 0; // Chỉ số quét dòng từ 0 đến 7
+
+// Mảng tra cứu chân quét Cột (ENM0 -> ENM7) tương ứng sơ đồ PA2-PA4, PA10-PA15
+const uint16_t ENM_PIN[8] = {
+    GPIO_PIN_2,  // ENM0 -> PA2
+    GPIO_PIN_3,  // ENM1 -> PA3
+    GPIO_PIN_10, // ENM2 -> PA10
+    GPIO_PIN_11, // ENM3 -> PA11
+    GPIO_PIN_12, // ENM4 -> PA12
+    GPIO_PIN_13, // ENM5 -> PA13
+    GPIO_PIN_14, // ENM6 -> PA14
+    GPIO_PIN_15  // ENM7 -> PA15
+};
+
+int timer_counter[10] = {0};
+int timer_flag[10] = {0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -91,13 +118,26 @@ int main(void)
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT (& htim2 ) ;
   /* USER CODE END 2 */
-
+  void setTimer(int index, int duration);
+  void timerRun(void);
+  void updateLEDMatrix(int index);
   /* Infinite loop */
+  setTimer(0, 2);
   /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
-
+    // Kiểm tra cờ Software Timer 0
+      if (timer_flag[0] == 1) {
+          setTimer(0, 2); // Nạp lại timer 2ms cho lần quét tiếp theo
+          
+          updateLEDMatrix(index_matrix);
+          
+          index_matrix++;
+          if (index_matrix >= 8) {
+              index_matrix = 0;
+          }
+      }
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -197,26 +237,38 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
-                          |GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9
+                          |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13
+                          |GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PA4 PA5 PA6 PA7
-                           PA8 PA9 PA10 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
-                          |GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10;
+  /*Configure GPIO pins : PA2 PA3 PA4 PA5
+                           PA6 PA7 PA8 PA9
+                           PA10 PA11 PA12 PA13
+                           PA14 PA15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9
+                          |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13
+                          |GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB1 PB2 PB3
-                           PB4 PB5 PB6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
+  /*Configure GPIO pins : PB0 PB1 PB2 PB10
+                           PB11 PB12 PB13 PB14
+                           PB15 PB3 PB4 PB5
+                           PB6 PB8 PB9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -225,15 +277,46 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-int counter = 100;
- void HAL_TIM_PeriodElapsedCallback ( TIM_HandleTypeDef * htim )
-{
- counter--;
- if( counter <= 0) {
- counter = 100;
- HAL_GPIO_TogglePin ( GPIOA , GPIO_PIN_5 ) ;
- 	 }
- }
+void updateLEDMatrix(int index) {
+    // 1. TẮT TẤT CẢ CÁC CỘT TRƯỚC ĐỂ TRÁNH BÓNG MỜ (GHOSTING)
+    // Tắt ngõ ra ULN2803 bằng cách đưa các chân PA kiểm soát ENM về Mức 0 (RESET)
+    for (int i = 0; i < 8; i++) {
+        HAL_GPIO_WritePin(GPIOA, ENM_PIN[i], GPIO_PIN_RESET);
+    }
+
+    // 2. XUẤT DỮ LIỆU HÀNG RA PORT B (PB8 -> PB15)
+    uint8_t row_data = matrix_buffer[index];
+    for (int bit = 0; bit < 8; bit++) {
+        GPIO_PinState pin_state = (row_data & (1 << bit)) ? GPIO_PIN_SET : GPIO_PIN_RESET;
+        HAL_GPIO_WritePin(GPIOB, (GPIO_PIN_8 << bit), pin_state);
+    }
+
+    // 3. BẬT DUY NHẤT CỘT HIỆN TẠI (INDEX)
+    // Kích mức High (SET) ở ngõ vào ULN2803 -> Ngõ ra kéo Cột tương ứng xuống GND
+    HAL_GPIO_WritePin(GPIOA, ENM_PIN[index], GPIO_PIN_SET);
+}
+void setTimer(int index, int duration){
+  timer_counter[index] = duration;
+  timer_flag[index] = 0;
+}
+void timerRun(void) {
+    for (int i = 0; i < 10; i++) {
+        if (timer_counter[i] > 0) {
+            timer_counter[i]--;
+            if (timer_counter[i] <= 0) {
+                timer_flag[i] = 1; // Bật cờ ngắt phần mềm khi hết thời gian
+            }
+        }
+    }
+}
+/**
+  * @brief Callback phục vụ ngắt Hardware Timer (Gọi tự động mỗi khi TIM2 ngắt)
+  */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
+    if (htim->Instance == TIM2) {
+        timerRun(); // Gọi hàm giảm đếm ngược timer mỗi khi có ngắt Hardware
+    }
+}
 /* USER CODE END 4 */
 
 /**
