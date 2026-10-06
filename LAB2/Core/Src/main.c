@@ -74,7 +74,10 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
 /* USER CODE BEGIN PFP */
-
+void setTimer(int index, int duration);
+void timerRun(void);
+void updateAnimationBuffer(void);
+void updateLEDMatrix(int index);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -117,7 +120,7 @@ int main(void)
   setTimer(0, 2);   // Timer 0: Quét LED Matrix mỗi 2ms
   setTimer(1, 150); // Timer 1: Dịch chữ sang trái mỗi 150ms
   
-  updateAnimationBuffer(); // Khởi tạo đệm hiển thị ban đầu
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -243,26 +246,38 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
-                          |GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOA, GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9
+                          |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13
+                          |GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : PA4 PA5 PA6 PA7
-                           PA8 PA9 PA10 */
-  GPIO_InitStruct.Pin = GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_7
-                          |GPIO_PIN_8|GPIO_PIN_9|GPIO_PIN_10;
+  /*Configure GPIO pins : PA2 PA3 PA4 PA5
+                           PA6 PA7 PA8 PA9
+                           PA10 PA11 PA12 PA13
+                           PA14 PA15 */
+  GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6|GPIO_PIN_7|GPIO_PIN_8|GPIO_PIN_9
+                          |GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13
+                          |GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : PB0 PB1 PB2 PB3
-                           PB4 PB5 PB6 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
-                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6;
+  /*Configure GPIO pins : PB0 PB1 PB2 PB10
+                           PB11 PB12 PB13 PB14
+                           PB15 PB3 PB4 PB5
+                           PB6 PB8 PB9 */
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
+                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
+                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
+                          |GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_9;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -271,6 +286,30 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+// --- DỊCH VÀ QUÉT MA TRẬN LED ---
+// Quét Ma trận LED 8x8 (Cột PA, Hàng PB8-PB15)
+void updateLEDMatrix(int index) {
+    // 1. Tắt tất cả các cột chống bóng mờ (ULN2803 Input LOW)
+    for (int i = 0; i < 8; i++) {
+        HAL_GPIO_WritePin(GPIOA, ENM_PIN[i], GPIO_PIN_RESET);
+    }
+
+    // 2. Xuất dữ liệu Hàng ra PB8 -> PB15
+    uint8_t row_data = matrix_buffer[index];
+    for (int bit = 0; bit < 8; bit++) {
+        GPIO_PinState pin_state = (row_data & (1 << bit)) ? GPIO_PIN_SET : GPIO_PIN_RESET;
+        HAL_GPIO_WritePin(GPIOB, (GPIO_PIN_8 << bit), pin_state);
+    }
+
+    // 3. Bật Cột hiện tại (ULN2803 Input HIGH -> Ngõ ra kéo xuống GND)
+    HAL_GPIO_WritePin(GPIOA, ENM_PIN[index], GPIO_PIN_SET);
+}     
+// Cập nhật 8 cột hiển thị từ chuỗi font dựa theo shift_offset
+void updateAnimationBuffer(void) {
+    for (int i = 0; i < 8; i++) {
+        matrix_buffer[i] = font_sequence[(shift_offset + i) % SEQUENCE_LEN];
+    }
+}
 void setTimer(int index, int duration) {
     timer_counter[index] = duration;
     timer_flag[index] = 0;
@@ -293,31 +332,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     }
 }
 
-// --- DỊCH VÀ QUÉT MA TRẬN LED ---
-// Cập nhật 8 cột hiển thị từ chuỗi font dựa theo shift_offset
-void updateAnimationBuffer(void) {
-    for (int i = 0; i < 8; i++) {
-        matrix_buffer[i] = font_sequence[(shift_offset + i) % SEQUENCE_LEN];
-    }
-}
 
-// Quét Ma trận LED 8x8 (Cột PA, Hàng PB8-PB15)
-void updateLEDMatrix(int index) {
-    // 1. Tắt tất cả các cột chống bóng mờ (ULN2803 Input LOW)
-    for (int i = 0; i < 8; i++) {
-        HAL_GPIO_WritePin(GPIOA, ENM_PIN[i], GPIO_PIN_RESET);
-    }
-
-    // 2. Xuất dữ liệu Hàng ra PB8 -> PB15
-    uint8_t row_data = matrix_buffer[index];
-    for (int bit = 0; bit < 8; bit++) {
-        GPIO_PinState pin_state = (row_data & (1 << bit)) ? GPIO_PIN_SET : GPIO_PIN_RESET;
-        HAL_GPIO_WritePin(GPIOB, (GPIO_PIN_8 << bit), pin_state);
-    }
-
-    // 3. Bật Cột hiện tại (ULN2803 Input HIGH -> Ngõ ra kéo xuống GND)
-    HAL_GPIO_WritePin(GPIOA, ENM_PIN[index], GPIO_PIN_SET);
-}
 /* USER CODE END 4 */
 
 /**
