@@ -46,14 +46,14 @@ TIM_HandleTypeDef htim2;
 // --- BÀI 5: ĐỒNG HỒ SỐ (4 LED 7 ĐOẠN) ---
 int hour = 14;
 int minute = 20;
-int second = 30;
+int second = 50;
 
 int led_buffer[4] = {0, 0, 0, 0}; // Mảng đệm chứa 4 số của đồng hồ
 int index_led = 0;
 
 // Các biến đếm thời gian trực tiếp trong ngắt (BÀI 5)
 int timer_clock_count = 100; // 100 * 10ms = 1000ms (1 giây tăng biến second)
-int timer_led_scan = 1;      // Quét LED 7 đoạn mượt mỗi 10ms
+int timer_led_scan = 25;      // Quét LED 7 đoạn mượt mỗi 250ms
 
 // --- MA TRẬN LED 8x8 (CHỮ 'A' TRƯỢT DƯỚI -> TRÊN) ---
 const uint8_t font_A[8] = {
@@ -129,40 +129,34 @@ int main(void)
   {
     /* USER CODE END WHILE */
 
-      // =========================================================================
-      // 1. QUÉT MA TRẬN LED BẰNG 8 CỜ TƯƠNG ỨNG 8 CỘT (timer_flag[0] -> [7])
-      // =========================================================================
+
       for (int i = 0; i < 8; i++) {
           if (timer_flag[i] == 1) {
-              updateLEDMatrix(i); // Xuất dữ liệu cột thứ i
-              timer_flag[i] = 0;  // Xóa cờ hiện tại
+              updateLEDMatrix(i); 
+              timer_flag[i] = 0;
 
-              // Kích hoạt cờ cột tiếp theo sau 1 chu kỳ ngắt (10ms)
+            
               int next_col = (i + 1) % 8;
               setTimer(next_col, 1);
           }
       }
 
-      // =========================================================================
-      // 2. DỊCH CHỮ 'A' TỪ DƯỚI LÊN TRÊN (timer_flag[10])
-      // =========================================================================
+
       if (timer_flag[10] == 1) {
-          setTimer(10, 15); // Trượt 1 hàng mỗi 150ms
+          setTimer(10, 15); 
 
           vertical_shift++;
           if (vertical_shift >= 16) {
-              vertical_shift = 0; // Quay lại vị trí dưới cùng
+              vertical_shift = 0; 
           }
 
-          updateAnimationBuffer(); // Tính toán lại dữ liệu các bit
+          updateAnimationBuffer(); 
       }
 
-      // =========================================================================
-      // 3. CHỚP TẮT LED D1 MỖI 500MS (timer_flag[9])
-      // =========================================================================
+  
       if (timer_flag[9] == 1) {
-          setTimer(9, 50); // Nạp lại 500ms
-          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_15); // Đảo trạng thái LED D1
+          setTimer(9, 50); 
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5); 
       }
 
     /* USER CODE BEGIN 3 */
@@ -308,27 +302,27 @@ void updateClockBuffer(void) {
     led_buffer[3] = minute % 10; // Hàng đơn vị của phút
 }
 
-// Cập nhật trạng thái hiển thị tuần tự cho 4 LED (Chân PA6, PA7, PA8, PA9)[cite: 6]
+// Cập nhật trạng thái hiển thị tuần tự cho 4 LED (Chân PA6, PA7, PA8, PA9)
 void update7SEG(int index) {
-    // Tắt tất cả 4 Transistor trước khi đổi số (PA6, PA7, PA8, PA9 = 1)[cite: 6]
+    // Tắt tất cả 4 Transistor trước khi đổi số (PA6, PA7, PA8, PA9 = 1)
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9, GPIO_PIN_SET);
 
     switch (index) {
         case 0:
             display7SEG(led_buffer[0]);
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // Bật LED 1 (PA6 = 0)[cite: 6]
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // Bật LED 1 (PA6 = 0)
             break;
         case 1:
             display7SEG(led_buffer[1]);
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // Bật LED 2 (PA7 = 0)[cite: 6]
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // Bật LED 2 (PA7 = 0)
             break;
         case 2:
             display7SEG(led_buffer[2]);
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // Bật LED 3 (PA8 = 0)[cite: 6]
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // Bật LED 3 (PA8 = 0)
             break;
         case 3:
             display7SEG(led_buffer[3]);
-            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET); // Bật LED 4 (PA9 = 0)[cite: 6]
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET); // Bật LED 4 (PA9 = 0)
             break;
         default:
             break;
@@ -378,19 +372,19 @@ void updateAnimationBuffer(void) {
 }
 
 void updateLEDMatrix(int index) {
-    // Tắt tất cả các cột chống bóng mờ (ULN2803 Input LOW)[cite: 6]
+    // Tắt tất cả các cột chống bóng mờ (ULN2803 Input LOW)
     for (int i = 0; i < 8; i++) {
         HAL_GPIO_WritePin(GPIOA, ENM_PIN[i], GPIO_PIN_RESET);
     }
 
-    // Xuất dữ liệu Hàng ra PB8 -> PB15[cite: 5]
+    // Xuất dữ liệu Hàng ra PB8 -> PB15
     uint8_t row_data = matrix_buffer[index];
     for (int bit = 0; bit < 8; bit++) {
         GPIO_PinState pin_state = (row_data & (1 << bit)) ? GPIO_PIN_SET : GPIO_PIN_RESET;
         HAL_GPIO_WritePin(GPIOB, (GPIO_PIN_8 << bit), pin_state);
     }
 
-    // Bật Cột hiện tại (ULN2803 Input HIGH)[cite: 6]
+    // Bật Cột hiện tại (ULN2803 Input HIGH)
     HAL_GPIO_WritePin(GPIOA, ENM_PIN[index], GPIO_PIN_SET);
 }
 
@@ -450,7 +444,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
         // ----------------------------------------------------
         timer_led_scan--;
         if (timer_led_scan <= 0) {
-            timer_led_scan = 1; // Quét nhanh mượt mỗi 10ms
+            timer_led_scan = 25; // Quét nhanh mượt mỗi 10ms
 
             // Quét LED tương ứng
             update7SEG(index_led);
