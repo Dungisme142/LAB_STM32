@@ -105,8 +105,8 @@ int main(void)
       {GPIOA, GPIO_PIN_10},  // Vị trí 5
       {GPIOA, GPIO_PIN_11},  // Vị trí 6
       {GPIOA, GPIO_PIN_12},  // Vị trí 7
-      {GPIOA, GPIO_PIN_14},  // Vị trí 8
-      {GPIOA, GPIO_PIN_13},  // Vị trí 9
+      {GPIOA, GPIO_PIN_13},  // Vị trí 8
+      {GPIOA, GPIO_PIN_14},  // Vị trí 9
       {GPIOA, GPIO_PIN_15},   // Vị trí 10
       {GPIOA, GPIO_PIN_5}    // Vị trí 11
   };
@@ -164,13 +164,15 @@ int main(void)
       if (second >= 60) {
           second = 0;
           minute++;
-          if (minute >= 60) {
-              minute = 0;
-              hour++;
-              if (hour >= 12) {
-                  hour = 0;
-              }
-          }
+        }
+      
+      if (minute >= 60) {
+          minute = 0;
+          hour++;
+        }
+              
+      if (hour >= 12) {
+          hour = 0;
       }
     /* USER CODE BEGIN 3 */
   }

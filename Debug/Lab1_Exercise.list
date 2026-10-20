@@ -27,9 +27,9 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   ALLOC
  11 .ARM.attributes 00000029  00000000  00000000  0002000c  2**0
                   CONTENTS, READONLY
- 12 .debug_info   000030e7  00000000  00000000  00020035  2**0
+ 12 .debug_info   000030e8  00000000  00000000  00020035  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 00000ec6  00000000  00000000  0002311c  2**0
+ 13 .debug_abbrev 00000ec6  00000000  00000000  0002311d  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  14 .debug_aranges 000003e0  00000000  00000000  00023fe8  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
@@ -218,7 +218,7 @@ int main(void)
       if (second >= 60) {
  8000222:	697b      	ldr	r3, [r7, #20]
  8000224:	2b3b      	cmp	r3, #59	; 0x3b
- 8000226:	ddc5      	ble.n	80001b4 <main+0x24>
+ 8000226:	dd04      	ble.n	8000232 <main+0xa2>
           second = 0;
  8000228:	2300      	movs	r3, #0
  800022a:	617b      	str	r3, [r7, #20]
@@ -226,22 +226,26 @@ int main(void)
  800022c:	69bb      	ldr	r3, [r7, #24]
  800022e:	3301      	adds	r3, #1
  8000230:	61bb      	str	r3, [r7, #24]
-          if (minute >= 60) {
+        }
+      
+      if (minute >= 60) {
  8000232:	69bb      	ldr	r3, [r7, #24]
  8000234:	2b3b      	cmp	r3, #59	; 0x3b
- 8000236:	ddbd      	ble.n	80001b4 <main+0x24>
-              minute = 0;
+ 8000236:	dd04      	ble.n	8000242 <main+0xb2>
+          minute = 0;
  8000238:	2300      	movs	r3, #0
  800023a:	61bb      	str	r3, [r7, #24]
-              hour++;
+          hour++;
  800023c:	69fb      	ldr	r3, [r7, #28]
  800023e:	3301      	adds	r3, #1
  8000240:	61fb      	str	r3, [r7, #28]
-              if (hour >= 12) {
+        }
+              
+      if (hour >= 12) {
  8000242:	69fb      	ldr	r3, [r7, #28]
  8000244:	2b0b      	cmp	r3, #11
  8000246:	ddb5      	ble.n	80001b4 <main+0x24>
-                  hour = 0;
+          hour = 0;
  8000248:	2300      	movs	r3, #0
  800024a:	61fb      	str	r3, [r7, #28]
   {
