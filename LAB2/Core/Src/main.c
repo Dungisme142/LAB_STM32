@@ -4,6 +4,17 @@
   * @file           : main.c
   * @brief          : Main program body
   ******************************************************************************
+  * @attention
+  *
+  * <h2><center>&copy; Copyright (c) 2026 STMicroelectronics.
+  * All rights reserved.</center></h2>
+  *
+  * This software component is licensed by ST under BSD 3-Clause license,
+  * the "License"; You may not use this file except in compliance with the
+  * License. You may obtain a copy of the License at:
+  *                        opensource.org/licenses/BSD-3-Clause
+  *
+  ******************************************************************************
   */
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
@@ -21,7 +32,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -33,40 +43,37 @@
 TIM_HandleTypeDef htim2;
 
 /* USER CODE BEGIN PV */
-// Chuỗi Font: Chữ 'A' (8 cột) + 8 cột trống (0x00)
-const uint8_t font_sequence[] = {
-    0x18, 0x3C, 0x66, 0x66, 0x7E, 0x66, 0x66, 0x00, // Chữ 'A'
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  // Khoảng trống 8 cột
+// --- BẤN/BIẾN ĐỒNG HỒ SỐ (4 LED 7 ĐOẠN) ---
+int hour = 14;
+int minute = 20;
+int second = 30;
+
+int led_buffer[4] = {0, 0, 0, 0}; // Mảng đệm chứa 4 số của đồng hồ
+int index_led = 0;
+
+// Biến đếm và cờ 1 giây cho đồng hồ thực hiện trên vòng while(1)
+int timer_clock_count = 100; // 100 * 10ms = 1000ms (1s)
+int flag_clock_1s = 0;       // Cờ báo ngắt 1s để xử lý trong while(1)
+int timer_led_scan = 1;      // 1 * 10ms = 10ms (Quét mượt 4 LED 7 đoạn)
+
+// --- BIẾN MA TRẬN LED 8x8 (CHỮ 'A' TRƯỢT DƯỚI -> TRÊN) ---
+const uint8_t font_A[8] = {
+    0x18, 0x3C, 0x66, 0x66, 0x7E, 0x66, 0x66, 0x00
 };
 
-#define SEQUENCE_LEN (sizeof(font_sequence) / sizeof(font_sequence[0]))
+uint8_t matrix_buffer[8] = {0}; // Đệm 8 cột LED Matrix
+int vertical_shift = 0;         // Mức độ trượt dọc (0 -> 15)
 
-uint8_t matrix_buffer[8] = {0}; // Đệm 8 cột hiển thị LED Matrix
-int shift_offset = 0;           // Chỉ số trượt khung ảnh
-
-// Mảng tra cứu chân quét Cột ENM0 -> ENM7 (PA2-PA3, PA10-PA15)
+// Mảng tra cứu chân quét Cột ENM0 -> ENM7 qua ULN2803 (PA2-PA3, PA10-PA15)
 const uint16_t ENM_PIN[8] = {
     GPIO_PIN_2,  GPIO_PIN_3,  GPIO_PIN_10, GPIO_PIN_11,
     GPIO_PIN_12, GPIO_PIN_13, GPIO_PIN_14, GPIO_PIN_15
 };
 
-// Mảng tra cứu chân điều khiển PNP Transistor của 4 LED 7 đoạn (PA5, PA6, PA7, PA8)
-const uint16_t SEG_EN_PIN[4] = {
-    GPIO_PIN_5, GPIO_PIN_6, GPIO_PIN_7, GPIO_PIN_8
-};
-
-// Mảng mã 7 đoạn Anode chung (Mức 0 = SÁNG) cho các số 1, 2, 3, 4
-const uint8_t seg7_code[10] = {
-    0x40, 0x79, 0x24, 0x30, 0x19, 0x12, 0x02, 0x78, 0x00, 0x10
-};
-int seg7_buffer[4] = {1, 2, 3, 4}; // Hiển thị "1234" lên 4 LED 7 đoạn
-int index_7seg = 0;                // Chỉ số quét LED 7 đoạn (0 -> 3)
-
 // Software Timer Global Variables
-// flag[0..7]: 8 cột LED Matrix
-// flag[8]: Quét 4 LED 7 đoạn
-// flag[9]: Chớp tắt LED D2, D3 (chân DOT / PA4)
-// flag[10]: Dịch chuyển chữ A
+// timer_flag[0..7]: Quét 8 Cột Ma trận LED bằng 8 cờ độc lập
+// timer_flag[9]: Chớp tắt LED D1 (500ms)
+// timer_flag[10]: Dịch chữ 'A' từ Dưới lên Trên (150ms)
 int timer_counter[12] = {0};
 int timer_flag[12] = {0};
 /* USER CODE END PV */
@@ -75,13 +82,15 @@ int timer_flag[12] = {0};
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM2_Init(void);
-
 /* USER CODE BEGIN PFP */
+void display7SEG(int num);
+void update7SEG(int index);
+void updateClockBuffer(void);
+
 void setTimer(int index, int duration);
 void timerRun(void);
 void updateAnimationBuffer(void);
 void updateLEDMatrix(int index);
-void update7Segment(int index);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -104,65 +113,84 @@ int main(void)
   MX_TIM2_Init();
 
   /* USER CODE BEGIN 2 */
-  HAL_TIM_Base_Start_IT(&htim2); // Kích hoạt Hardware Timer 2
+  updateClockBuffer();     // Khởi tạo số cho Đồng hồ
+  updateAnimationBuffer(); // Khởi tạo đệm cho Ma trận LED
 
-  updateAnimationBuffer(); // Khởi tạo dữ liệu đệm ban đầu cho chữ A
+  HAL_TIM_Base_Start_IT(&htim2); // Kích hoạt ngắt TIM2
 
-  // Khởi tạo các Timer
-  setTimer(0, 1);    // Timer 0: Bắt đầu chuỗi quét 8 cờ LED Matrix
-  setTimer(8, 25);    // Timer 8: Quét 4 LED 7-segment (mỗi 250ms với TIM2 100Hz/10ms)
-  setTimer(9, 50);   // Timer 9: Chớp tắt LED D2, D3 (500ms)
-  setTimer(10, 15);  // Timer 10: Dịch chữ A sang phải (150ms)
+  // Khởi tạo cờ quét Cột 0 cho LED Matrix, Timer dịch chữ A và Timer chớp tắt D1
+  setTimer(0, 1);    // Bắt đầu chuỗi quét 8 cờ Matrix
+  setTimer(9, 50);   // Timer 9: Chớp tắt LED D1 mỗi 500ms
+  setTimer(10, 15);  // Timer 10: Dịch chữ A từ dưới lên trên mỗi 150ms
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    /* USER CODE END WHILE */
+
       // =========================================================================
-      // 1. QUÉT MA TRẬN LED BẰNG 8 CỜ (timer_flag[0] -> timer_flag[7])
+      // 1. QUÉT MA TRẬN LED BẰNG 8 CỜ TƯƠNG ỨNG 8 CỘT (timer_flag[0] -> [7])
       // =========================================================================
       for (int i = 0; i < 8; i++) {
           if (timer_flag[i] == 1) {
-              updateLEDMatrix(i); // Hiển thị cột thứ i
-              timer_flag[i] = 0;  // Xóa cờ
+              updateLEDMatrix(i); // Xuất dữ liệu cột thứ i
+              timer_flag[i] = 0;  // Xóa cờ hiện tại
 
-              // Đặt Timer 10ms (1 đơn vị timer với TIM2 100Hz) cho cột tiếp theo
+              // Kích hoạt cờ cột tiếp theo sau 1 chu kỳ ngắt (10ms)
               int next_col = (i + 1) % 8;
               setTimer(next_col, 1);
           }
       }
 
       // =========================================================================
-      // 2. QUÉT HIỂN THỊ 4 LED 7 ĐOẠN (timer_flag[8])
-      // =========================================================================
-      if (timer_flag[8] == 1) {
-          setTimer(8, 25); // Quét liên tục giữa các LED 7 đoạn
-
-          update7Segment(index_7seg);
-          index_7seg = (index_7seg + 1) % 4;
-      }
-
-      // =========================================================================
-      // 3. CHỚP TẮT LED D2, D3 QUA CHÂN DOT (PA4) (timer_flag[9])
-      // =========================================================================
-      if (timer_flag[9] == 1) {
-          setTimer(9, 50); // Lặp lại mỗi 500ms
-          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
-      }
-
-      // =========================================================================
-      // 4. DỊCH CHỮ 'A' TỪ TRÁI SANG PHẢI (timer_flag[10])
+      // 2. DỊCH CHỮ 'A' TỪ DƯỚI LÊN TRÊN (timer_flag[10])
       // =========================================================================
       if (timer_flag[10] == 1) {
-          setTimer(10, 15); // Dịch 1 bước mỗi 150ms
+          setTimer(10, 15); // Trượt 1 hàng mỗi 150ms
 
-          shift_offset++;
-          if (shift_offset >= SEQUENCE_LEN) {
-              shift_offset = 0; // Quay lại ban đầu sau khi trượt hết
+          vertical_shift++;
+          if (vertical_shift >= 16) {
+              vertical_shift = 0; // Quay lại vị trí dưới cùng
           }
 
-          updateAnimationBuffer(); // Cập nhật khung hình mới
+          updateAnimationBuffer(); // Tính toán lại dữ liệu các bit
+      }
+
+      // =========================================================================
+      // 3. CHỚP TẮT LED D1 MỖI 500MS (timer_flag[9])
+      // =========================================================================
+      if (timer_flag[9] == 1) {
+          setTimer(9, 50); // Nạp lại 500ms
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_15); // Đảo trạng thái LED D1
+      }
+
+      // =========================================================================
+      // 4. ĐẾM THỜI GIAN THỰC ĐỒNG HỒ SỐ VÀ CHỚP TẮT LED D2, D3 (MỖI 1 GIÂY)
+      // =========================================================================
+      if (flag_clock_1s == 1) {
+          flag_clock_1s = 0; // Xóa cờ 1s
+
+          // Nhấp nháy LED D2, D3 nối chung vào chân DOT (PA4)
+          HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_4);
+
+          // Tăng thời gian thực
+          second++;
+          if (second >= 60) {
+              second = 0;
+              minute++;
+              if (minute >= 60) {
+                  minute = 0;
+                  hour++;
+                  if (hour >= 24) {
+                      hour = 0;
+                  }
+              }
+          }
+
+          // Cập nhật lại giá trị hiển thị mới vào led_buffer
+          updateClockBuffer();
       }
 
     /* USER CODE BEGIN 3 */
@@ -179,6 +207,9 @@ void SystemClock_Config(void)
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
 
+  /** Initializes the RCC Oscillators according to the specified parameters
+  * in the RCC_OscInitTypeDef structure.
+  */
   RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
@@ -187,7 +218,8 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-
+  /** Initializes the CPU, AHB and APB buses clocks
+  */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
                               |RCC_CLOCKTYPE_PCLK1|RCC_CLOCKTYPE_PCLK2;
   RCC_ClkInitStruct.SYSCLKSource = RCC_SYSCLKSOURCE_HSI;
@@ -208,9 +240,17 @@ void SystemClock_Config(void)
   */
 static void MX_TIM2_Init(void)
 {
+
+  /* USER CODE BEGIN TIM2_Init 0 */
+
+  /* USER CODE END TIM2_Init 0 */
+
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
 
+  /* USER CODE BEGIN TIM2_Init 1 */
+
+  /* USER CODE END TIM2_Init 1 */
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 7999;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
@@ -232,6 +272,10 @@ static void MX_TIM2_Init(void)
   {
     Error_Handler();
   }
+  /* USER CODE BEGIN TIM2_Init 2 */
+
+  /* USER CODE END TIM2_Init 2 */
+
 }
 
 /**
@@ -254,10 +298,10 @@ static void MX_GPIO_Init(void)
                           |GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
-                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
-                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
-                          |GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_9, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_8
+                          |GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12
+                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15, GPIO_PIN_RESET);
 
   /*Configure GPIO pins : PA2 PA3 PA4 PA5 PA6 PA7 PA8 PA9 PA10 PA11 PA12 PA13 PA14 PA15 */
   GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
@@ -270,62 +314,117 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : PB0 PB1 PB2 PB3 PB4 PB5 PB6 PB8 PB9 PB10 PB11 PB12 PB13 PB14 PB15 */
-  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_10
-                          |GPIO_PIN_11|GPIO_PIN_12|GPIO_PIN_13|GPIO_PIN_14
-                          |GPIO_PIN_15|GPIO_PIN_3|GPIO_PIN_4|GPIO_PIN_5
-                          |GPIO_PIN_6|GPIO_PIN_8|GPIO_PIN_9;
+  GPIO_InitStruct.Pin = GPIO_PIN_0|GPIO_PIN_1|GPIO_PIN_2|GPIO_PIN_3
+                          |GPIO_PIN_4|GPIO_PIN_5|GPIO_PIN_6|GPIO_PIN_8
+                          |GPIO_PIN_9|GPIO_PIN_10|GPIO_PIN_11|GPIO_PIN_12
+                          |GPIO_PIN_13|GPIO_PIN_14|GPIO_PIN_15;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
 }
 
 /* USER CODE BEGIN 4 */
-// 1. Cập nhật đệm hiển thị chữ 'A' trượt từ Trái sang Phải
-void updateAnimationBuffer(void) {
-    for (int i = 0; i < 8; i++) {
-        int font_idx = (SEQUENCE_LEN - shift_offset + i) % SEQUENCE_LEN;
-        matrix_buffer[i] = font_sequence[font_idx];
+// ----------------------------------------------------
+// CÁC HÀM XỬ LÝ ĐỒNG HỒ 4 LED 7 ĐOẠN
+// ----------------------------------------------------
+void updateClockBuffer(void) {
+    led_buffer[0] = hour / 10;   // Hàng chục giờ
+    led_buffer[1] = hour % 10;   // Hàng đơn vị giờ
+    led_buffer[2] = minute / 10; // Hàng chục phút
+    led_buffer[3] = minute % 10; // Hàng đơn vị phút
+}
+
+// Cập nhật bật Transistor cho 4 LED (PA5 - PA8, Anode Chung qua PNP)[cite: 6]
+void update7SEG(int index) {
+    // Tắt tất cả 4 Transistor trước khi đổi số (Kéo HIGH chân PA5 -> PA8)[cite: 6]
+    HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5 | GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8, GPIO_PIN_SET);
+
+    switch (index) {
+        case 0:
+            display7SEG(led_buffer[0]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // Bật LED 1 (PA5 = 0)[cite: 6]
+            break;
+        case 1:
+            display7SEG(led_buffer[1]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // Bật LED 2 (PA6 = 0)[cite: 6]
+            break;
+        case 2:
+            display7SEG(led_buffer[2]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // Bật LED 3 (PA7 = 0)[cite: 6]
+            break;
+        case 3:
+            display7SEG(led_buffer[3]);
+            HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // Bật LED 4 (PA8 = 0)[cite: 6]
+            break;
+        default:
+            break;
     }
 }
 
-// 2. Quét Ma trận LED 8x8 (Cột PA, Hàng PB8-PB15)
+// Xuất mã 7 đoạn ra PB0 - PB6
+void display7SEG(int num) {
+    unsigned char seg_code[10] = {
+        0x40, // 0
+        0x79, // 1
+        0x24, // 2
+        0x30, // 3
+        0x19, // 4
+        0x12, // 5
+        0x02, // 6
+        0x78, // 7
+        0x00, // 8
+        0x10  // 9
+    };
+
+    if (num >= 0 && num <= 9) {
+        unsigned char code = seg_code[num];
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_0, (code & 0x01) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_1, (code & 0x02) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_2, (code & 0x04) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_3, (code & 0x08) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_4, (code & 0x10) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_5, (code & 0x20) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+        HAL_GPIO_WritePin(GPIOB, GPIO_PIN_6, (code & 0x40) ? GPIO_PIN_SET : GPIO_PIN_RESET);
+    }
+}
+
+// ----------------------------------------------------
+// CÁC HÀM XỬ LÝ MA TRẬN LED 8x8 (CHỮ 'A' TRƯỢT DƯỚI -> TRÊN)
+// ----------------------------------------------------
+void updateAnimationBuffer(void) {
+    for (int col = 0; col < 8; col++) {
+        uint8_t data = font_A[col];
+
+        if (vertical_shift < 8) {
+            matrix_buffer[col] = (data << (7 - vertical_shift));
+        } else {
+            matrix_buffer[col] = (data >> (vertical_shift - 7));
+        }
+    }
+}
+
 void updateLEDMatrix(int index) {
-    // Tắt tất cả cột chống bóng mờ
+    // Tắt tất cả các cột chống bóng mờ (ULN2803 Input LOW)[cite: 6]
     for (int i = 0; i < 8; i++) {
         HAL_GPIO_WritePin(GPIOA, ENM_PIN[i], GPIO_PIN_RESET);
     }
 
-    // Xuất dữ liệu Hàng ra PB8 -> PB15
+    // Xuất dữ liệu Hàng ra PB8 -> PB15[cite: 5]
     uint8_t row_data = matrix_buffer[index];
     for (int bit = 0; bit < 8; bit++) {
         GPIO_PinState pin_state = (row_data & (1 << bit)) ? GPIO_PIN_SET : GPIO_PIN_RESET;
         HAL_GPIO_WritePin(GPIOB, (GPIO_PIN_8 << bit), pin_state);
     }
 
-    // Bật Cột hiện tại (Ngõ vào ULN2803 = HIGH)
+    // Bật Cột hiện tại (ULN2803 Input HIGH)[cite: 6]
     HAL_GPIO_WritePin(GPIOA, ENM_PIN[index], GPIO_PIN_SET);
 }
 
-// 3. Quét 4 LED 7-Segment qua PNP Transistor (EN0-EN3: PA5-PA8)
-void update7Segment(int index) {
-    // Tắt tất cả PNP Transistor (Kéo HIGH chân PA5 -> PA8) để chống nhòe
-    for (int i = 0; i < 4; i++) {
-        HAL_GPIO_WritePin(GPIOA, SEG_EN_PIN[i], GPIO_PIN_SET);
-    }
-
-    // Xuất mã 7 đoạn ra PB0 -> PB6
-    uint8_t code = seg7_code[seg7_buffer[index]];
-    for (int bit = 0; bit < 7; bit++) {
-        GPIO_PinState pin_state = (code & (1 << bit)) ? GPIO_PIN_SET : GPIO_PIN_RESET;
-        HAL_GPIO_WritePin(GPIOB, (GPIO_PIN_0 << bit), pin_state);
-    }
-
-    // Bật PNP Transistor tương ứng (Kéo LOW ngõ ra PA5/PA6/PA7/PA8)
-    HAL_GPIO_WritePin(GPIOA, SEG_EN_PIN[index], GPIO_PIN_RESET);
-}
-
-// 4. Các hàm Software Timer
+// ----------------------------------------------------
+// SOFTWARE TIMER ENGINE & HARDWARE INTERRUPT CALLBACK
+// ----------------------------------------------------
 void setTimer(int index, int duration) {
     timer_counter[index] = duration;
     timer_flag[index] = 0;
@@ -344,15 +443,62 @@ void timerRun(void) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) {
     if (htim->Instance == TIM2) {
+
+        // 1. CHẠY SOFTWARE TIMERS CHO MATRIX LED & LED D1
         timerRun();
+
+        // 2. BẬT CỜ BÁO 1 GIÂY ĐỂ VÒNG WHILE(1) TÍNH THỜI GIAN THỰC
+        timer_clock_count--;
+        if (timer_clock_count <= 0) {
+            timer_clock_count = 100; // Reset đếm 1000ms (1s)
+            flag_clock_1s = 1;       // Bật cờ để vòng while(1) xử lý
+        }
+
+        // 3. CHUYỂN QUÉT 4 LED 7 ĐOẠN (QUÉT MƯỢT TỪNG LED MỖI 10MS)
+        timer_led_scan--;
+        if (timer_led_scan <= 0) {
+            timer_led_scan = 1; // Quét nhanh mỗi 10ms
+
+            update7SEG(index_led);
+
+            index_led++;
+            if (index_led >= 4) {
+                index_led = 0;
+            }
+        }
     }
 }
 /* USER CODE END 4 */
 
+/**
+  * @brief  This function is executed in case of error occurrence.
+  * @retval None
+  */
 void Error_Handler(void)
 {
+  /* USER CODE BEGIN Error_Handler_Debug */
+  /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
   while (1)
   {
   }
+  /* USER CODE END Error_Handler_Debug */
 }
+
+#ifdef  USE_FULL_ASSERT
+/**
+  * @brief  Reports the name of the source file and the source line number
+  *         where the assert_param error has occurred.
+  * @param  file: pointer to the source file name
+  * @param  line: assert_param error line source number
+  * @retval None
+  */
+void assert_failed(uint8_t *file, uint32_t line)
+{
+  /* USER CODE BEGIN 6 */
+  /* User can add his own implementation to report the file name and line number,
+     ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
+  /* USER CODE END 6 */
+}
+#endif /* USE_FULL_ASSERT */
+
