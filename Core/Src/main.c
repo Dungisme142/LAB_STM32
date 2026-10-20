@@ -91,12 +91,12 @@ int main(void)
   void display7SEG_Horizontal(int num);
   void display7SEG_Vertical(int num);
 
-  int vert_status = STATE_RED; // Xuất phát: Đỏ 5 giây
-  int count_vert = 5;
+  int vert_status = STATE_RED; // Xuất phát: Đỏ 4 giây
+  int count_vert = 4;
 
   // --- TRẠNG THÁI VÀ BIẾN ĐẾM HƯỚNG NGANG (HORIZONTAL) ---
-  int horiz_status = STATE_GREEN; // Xuất phát: Xanh 3 giây
-  int count_horiz = 3;
+  int horiz_status = STATE_GREEN; // Xuất phát: Xanh 2 giây
+  int count_horiz = 2;
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
     while (1)
@@ -106,21 +106,21 @@ int main(void)
       // =========================================================================
       switch (vert_status) {
           case STATE_RED:
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_SET);   // RED ON
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // YELLOW OFF
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // GREEN OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5  | GPIO_PIN_10, GPIO_PIN_SET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6  | GPIO_PIN_11, GPIO_PIN_RESET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7  | GPIO_PIN_12, GPIO_PIN_RESET);
               break;
 
           case STATE_YELLOW:
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // RED OFF
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_SET);   // YELLOW ON
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_RESET); // GREEN OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5  | GPIO_PIN_10, GPIO_PIN_RESET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6  | GPIO_PIN_11, GPIO_PIN_SET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7  | GPIO_PIN_12, GPIO_PIN_RESET);
               break;
 
           case STATE_GREEN:
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5, GPIO_PIN_RESET); // RED OFF
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6, GPIO_PIN_RESET); // YELLOW OFF
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7, GPIO_PIN_SET);   // GREEN ON
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_5  | GPIO_PIN_10, GPIO_PIN_RESET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_6  | GPIO_PIN_11, GPIO_PIN_RESET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_7  | GPIO_PIN_12, GPIO_PIN_SET);
               break;
       }
 
@@ -129,21 +129,21 @@ int main(void)
       // =========================================================================
       switch (horiz_status) {
           case STATE_RED:
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_SET);   // RED ON
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // YELLOW OFF
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET); // GREEN OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4  | GPIO_PIN_13, GPIO_PIN_SET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8  | GPIO_PIN_14, GPIO_PIN_RESET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9  | GPIO_PIN_15, GPIO_PIN_RESET);
               break;
 
           case STATE_YELLOW:
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // RED OFF
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_SET);   // YELLOW ON
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_RESET); // GREEN OFF
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4  | GPIO_PIN_13, GPIO_PIN_RESET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8  | GPIO_PIN_14, GPIO_PIN_SET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9  | GPIO_PIN_15, GPIO_PIN_RESET);
               break;
 
           case STATE_GREEN:
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4, GPIO_PIN_RESET); // RED OFF
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8, GPIO_PIN_RESET); // YELLOW OFF
-              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9, GPIO_PIN_SET);   // GREEN ON
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_4  | GPIO_PIN_13, GPIO_PIN_RESET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_8  | GPIO_PIN_14, GPIO_PIN_RESET);
+              HAL_GPIO_WritePin(GPIOA, GPIO_PIN_9  | GPIO_PIN_15, GPIO_PIN_SET);
               break;
       }
 
@@ -162,48 +162,48 @@ int main(void)
       // 5. CẬP NHẬT BIẾN ĐẾM VÀ CHUYỂN TRẠNG THÁI ĐỘC LẬP TỪNG HƯỚNG
       // =========================================================================
 
-      // --- Giảm đếm ngược mỗi giây ---
-      count_vert--;
-      count_horiz--;
-
-      // --- Chuyển trạng thái Độc Lập cho Hướng Dọc: RED(5s) -> YELLOW(2s) -> GREEN(3s) ---
+      // --- Chuyển trạng thái Độc Lập cho Hướng Dọc ---
       if (count_vert <= 0) {
           switch (vert_status) {
-              case STATE_RED:      // Hết Đỏ 5s -> Sang Vàng 2s
+              case STATE_RED:      // Hết Đỏ 5s (4->0) -> Sang Vàng 2s (nạp 1)
                   vert_status = STATE_YELLOW;
+                  count_vert = 1;
+                  break;
+
+              case STATE_YELLOW:   // Hết Vàng 2s (1->0) -> Sang Xanh 3s (nạp 2)
+                  vert_status = STATE_GREEN;
                   count_vert = 2;
                   break;
 
-              case STATE_YELLOW:   // Hết Vàng 2s -> Sang Xanh 3s
-                  vert_status = STATE_GREEN;
-                  count_vert = 3;
-                  break;
-
-              case STATE_GREEN:    // Hết Xanh 3s -> Sang Đỏ 5s
+              case STATE_GREEN:    // Hết Xanh 3s (2->0) -> Sang Đỏ 5s (nạp 4)
                   vert_status = STATE_RED;
-                  count_vert = 5;
+                  count_vert = 4;
                   break;
           }
+      } else {
+          count_vert--;
       }
 
-      // --- Chuyển trạng thái Độc Lập cho Hướng Ngang: GREEN(3s) -> YELLOW(2s) -> RED(5s) ---
+      // --- Chuyển trạng thái Độc Lập cho Hướng Ngang ---
       if (count_horiz <= 0) {
           switch (horiz_status) {
-              case STATE_GREEN:    // Hết Xanh 3s -> Sang Vàng 2s
+              case STATE_GREEN:    // Hết Xanh 3s (2->0) -> Sang Vàng 2s (nạp 1)
                   horiz_status = STATE_YELLOW;
+                  count_horiz = 1;
+                  break;
+
+              case STATE_YELLOW:   // Hết Vàng 2s (1->0) -> Sang Đỏ 5s (nạp 4)
+                  horiz_status = STATE_RED;
+                  count_horiz = 4;
+                  break;
+
+              case STATE_RED:      // Hết Đỏ 5s (4->0) -> Sang Xanh 3s (nạp 2)
+                  horiz_status = STATE_GREEN;
                   count_horiz = 2;
                   break;
-
-              case STATE_YELLOW:   // Hết Vàng 2s -> Sang Đỏ 5s
-                  horiz_status = STATE_RED;
-                  count_horiz = 5;
-                  break;
-
-              case STATE_RED:      // Hết Đỏ 5s -> Sang Xanh 3s
-                  horiz_status = STATE_GREEN;
-                  count_horiz = 3;
-                  break;
           }
+      } else {
+          count_horiz--;
       }
     /* USER CODE BEGIN 3 */
     }
