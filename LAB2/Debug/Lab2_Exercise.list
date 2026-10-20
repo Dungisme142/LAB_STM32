@@ -21,29 +21,29 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, ALLOC, LOAD, DATA
   8 .data         00000020  20000000  08002034  00020000  2**2
                   CONTENTS, ALLOC, LOAD, DATA
-  9 .bss          000000e8  20000020  08002054  00020020  2**2
+  9 .bss          000000ec  20000020  08002054  00020020  2**2
                   ALLOC
- 10 ._user_heap_stack 00000600  20000108  08002054  00020108  2**0
+ 10 ._user_heap_stack 00000604  2000010c  08002054  0002010c  2**0
                   ALLOC
  11 .ARM.attributes 00000029  00000000  00000000  00020020  2**0
                   CONTENTS, READONLY
- 12 .debug_info   000087d7  00000000  00000000  00020049  2**0
+ 12 .debug_info   000087b3  00000000  00000000  00020049  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 13 .debug_abbrev 00001554  00000000  00000000  00028820  2**0
+ 13 .debug_abbrev 00001541  00000000  00000000  000287fc  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 14 .debug_aranges 00000968  00000000  00000000  00029d78  2**3
+ 14 .debug_aranges 00000968  00000000  00000000  00029d40  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 15 .debug_ranges 000008c0  00000000  00000000  0002a6e0  2**3
+ 15 .debug_ranges 000008c0  00000000  00000000  0002a6a8  2**3
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 16 .debug_macro  000161f3  00000000  00000000  0002afa0  2**0
+ 16 .debug_macro  000161f3  00000000  00000000  0002af68  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   00009557  00000000  00000000  00041193  2**0
+ 17 .debug_line   00009546  00000000  00000000  0004115b  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    00081e39  00000000  00000000  0004a6ea  2**0
+ 18 .debug_str    00081e30  00000000  00000000  0004a6a1  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000053  00000000  00000000  000cc523  2**0
+ 19 .comment      00000053  00000000  00000000  000cc4d1  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  000026cc  00000000  00000000  000cc578  2**2
+ 20 .debug_frame  000026c8  00000000  00000000  000cc524  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -84,142 +84,141 @@ Disassembly of section .text:
 int main(void)
 {
  800014c:	b580      	push	{r7, lr}
- 800014e:	b082      	sub	sp, #8
- 8000150:	af00      	add	r7, sp, #0
+ 800014e:	af00      	add	r7, sp, #0
   /* MCU Configuration--------------------------------------------------------*/
   HAL_Init();
- 8000152:	f000 fc3b 	bl	80009cc <HAL_Init>
+ 8000150:	f000 fc3c 	bl	80009cc <HAL_Init>
   SystemClock_Config();
- 8000156:	f000 f867 	bl	8000228 <SystemClock_Config>
+ 8000154:	f000 f868 	bl	8000228 <SystemClock_Config>
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
- 800015a:	f000 f8ed 	bl	8000338 <MX_GPIO_Init>
+ 8000158:	f000 f8ee 	bl	8000338 <MX_GPIO_Init>
   MX_TIM2_Init();
- 800015e:	f000 f89f 	bl	80002a0 <MX_TIM2_Init>
+ 800015c:	f000 f8a0 	bl	80002a0 <MX_TIM2_Init>
 
   /* USER CODE BEGIN 2 */
   updateClockBuffer();     // Khởi tạo đệm thời gian cho Đồng hồ (Bài 5)
- 8000162:	f000 f93f 	bl	80003e4 <updateClockBuffer>
+ 8000160:	f000 f940 	bl	80003e4 <updateClockBuffer>
   updateAnimationBuffer(); // Khởi tạo đệm cho Ma trận LED
- 8000166:	f000 fa37 	bl	80005d8 <updateAnimationBuffer>
+ 8000164:	f000 fa38 	bl	80005d8 <updateAnimationBuffer>
 
   HAL_TIM_Base_Start_IT(&htim2); // Kích hoạt ngắt TIM2
- 800016a:	482b      	ldr	r0, [pc, #172]	; (8000218 <main+0xcc>)
- 800016c:	f001 fb76 	bl	800185c <HAL_TIM_Base_Start_IT>
+ 8000168:	482a      	ldr	r0, [pc, #168]	; (8000214 <main+0xc8>)
+ 800016a:	f001 fb77 	bl	800185c <HAL_TIM_Base_Start_IT>
 
   // Khởi tạo cờ quét Cột 0 cho LED Matrix, Timer dịch chữ A và Timer chớp tắt D1
   setTimer(0, 1);    // Bắt đầu chuỗi quét 8 cờ Matrix
- 8000170:	2101      	movs	r1, #1
- 8000172:	2000      	movs	r0, #0
- 8000174:	f000 fab8 	bl	80006e8 <setTimer>
+ 800016e:	2101      	movs	r1, #1
+ 8000170:	2000      	movs	r0, #0
+ 8000172:	f000 fab9 	bl	80006e8 <setTimer>
   setTimer(9, 50);   // Timer 9: Chớp tắt LED D1 mỗi 500ms
- 8000178:	2132      	movs	r1, #50	; 0x32
- 800017a:	2009      	movs	r0, #9
- 800017c:	f000 fab4 	bl	80006e8 <setTimer>
+ 8000176:	2132      	movs	r1, #50	; 0x32
+ 8000178:	2009      	movs	r0, #9
+ 800017a:	f000 fab5 	bl	80006e8 <setTimer>
   setTimer(10, 15);  // Timer 10: Dịch chữ A từ dưới lên trên mỗi 150ms
- 8000180:	210f      	movs	r1, #15
- 8000182:	200a      	movs	r0, #10
- 8000184:	f000 fab0 	bl	80006e8 <setTimer>
+ 800017e:	210f      	movs	r1, #15
+ 8000180:	200a      	movs	r0, #10
+ 8000182:	f000 fab1 	bl	80006e8 <setTimer>
+  /* Infinite loop */
+  /* USER CODE BEGIN WHILE */
   while (1)
   {
     /* USER CODE END WHILE */
-
-
-      for (int i = 0; i < 8; i++) {
- 8000188:	2300      	movs	r3, #0
- 800018a:	607b      	str	r3, [r7, #4]
- 800018c:	e01e      	b.n	80001cc <main+0x80>
-          if (timer_flag[i] == 1) {
- 800018e:	4a23      	ldr	r2, [pc, #140]	; (800021c <main+0xd0>)
- 8000190:	687b      	ldr	r3, [r7, #4]
- 8000192:	f852 3023 	ldr.w	r3, [r2, r3, lsl #2]
- 8000196:	2b01      	cmp	r3, #1
- 8000198:	d115      	bne.n	80001c6 <main+0x7a>
-              updateLEDMatrix(i); 
- 800019a:	6878      	ldr	r0, [r7, #4]
- 800019c:	f000 fa58 	bl	8000650 <updateLEDMatrix>
-              timer_flag[i] = 0;
- 80001a0:	4a1e      	ldr	r2, [pc, #120]	; (800021c <main+0xd0>)
- 80001a2:	687b      	ldr	r3, [r7, #4]
+      if (timer_flag[flag] == 1) {
+ 8000186:	4b24      	ldr	r3, [pc, #144]	; (8000218 <main+0xcc>)
+ 8000188:	681b      	ldr	r3, [r3, #0]
+ 800018a:	4a24      	ldr	r2, [pc, #144]	; (800021c <main+0xd0>)
+ 800018c:	f852 3023 	ldr.w	r3, [r2, r3, lsl #2]
+ 8000190:	2b01      	cmp	r3, #1
+ 8000192:	d11c      	bne.n	80001ce <main+0x82>
+              updateLEDMatrix(flag); 
+ 8000194:	4b20      	ldr	r3, [pc, #128]	; (8000218 <main+0xcc>)
+ 8000196:	681b      	ldr	r3, [r3, #0]
+ 8000198:	4618      	mov	r0, r3
+ 800019a:	f000 fa59 	bl	8000650 <updateLEDMatrix>
+              timer_flag[flag] = 0;
+ 800019e:	4b1e      	ldr	r3, [pc, #120]	; (8000218 <main+0xcc>)
+ 80001a0:	681b      	ldr	r3, [r3, #0]
+ 80001a2:	4a1e      	ldr	r2, [pc, #120]	; (800021c <main+0xd0>)
  80001a4:	2100      	movs	r1, #0
  80001a6:	f842 1023 	str.w	r1, [r2, r3, lsl #2]
-
-            
-              int next_col = (i + 1) % 8;
- 80001aa:	687b      	ldr	r3, [r7, #4]
- 80001ac:	3301      	adds	r3, #1
- 80001ae:	425a      	negs	r2, r3
- 80001b0:	f003 0307 	and.w	r3, r3, #7
- 80001b4:	f002 0207 	and.w	r2, r2, #7
- 80001b8:	bf58      	it	pl
- 80001ba:	4253      	negpl	r3, r2
- 80001bc:	603b      	str	r3, [r7, #0]
-              setTimer(next_col, 1);
- 80001be:	2101      	movs	r1, #1
- 80001c0:	6838      	ldr	r0, [r7, #0]
- 80001c2:	f000 fa91 	bl	80006e8 <setTimer>
-      for (int i = 0; i < 8; i++) {
- 80001c6:	687b      	ldr	r3, [r7, #4]
- 80001c8:	3301      	adds	r3, #1
- 80001ca:	607b      	str	r3, [r7, #4]
- 80001cc:	687b      	ldr	r3, [r7, #4]
- 80001ce:	2b07      	cmp	r3, #7
- 80001d0:	dddd      	ble.n	800018e <main+0x42>
-          }
-      }
+              flag++;
+ 80001aa:	4b1b      	ldr	r3, [pc, #108]	; (8000218 <main+0xcc>)
+ 80001ac:	681b      	ldr	r3, [r3, #0]
+ 80001ae:	3301      	adds	r3, #1
+ 80001b0:	4a19      	ldr	r2, [pc, #100]	; (8000218 <main+0xcc>)
+ 80001b2:	6013      	str	r3, [r2, #0]
+              if(flag == 8){
+ 80001b4:	4b18      	ldr	r3, [pc, #96]	; (8000218 <main+0xcc>)
+ 80001b6:	681b      	ldr	r3, [r3, #0]
+ 80001b8:	2b08      	cmp	r3, #8
+ 80001ba:	d102      	bne.n	80001c2 <main+0x76>
+                flag = 0;
+ 80001bc:	4b16      	ldr	r3, [pc, #88]	; (8000218 <main+0xcc>)
+ 80001be:	2200      	movs	r2, #0
+ 80001c0:	601a      	str	r2, [r3, #0]
+              }
+              setTimer(flag, 1);
+ 80001c2:	4b15      	ldr	r3, [pc, #84]	; (8000218 <main+0xcc>)
+ 80001c4:	681b      	ldr	r3, [r3, #0]
+ 80001c6:	2101      	movs	r1, #1
+ 80001c8:	4618      	mov	r0, r3
+ 80001ca:	f000 fa8d 	bl	80006e8 <setTimer>
+        }
 
 
       if (timer_flag[10] == 1) {
- 80001d2:	4b12      	ldr	r3, [pc, #72]	; (800021c <main+0xd0>)
- 80001d4:	6a9b      	ldr	r3, [r3, #40]	; 0x28
- 80001d6:	2b01      	cmp	r3, #1
- 80001d8:	d111      	bne.n	80001fe <main+0xb2>
+ 80001ce:	4b13      	ldr	r3, [pc, #76]	; (800021c <main+0xd0>)
+ 80001d0:	6a9b      	ldr	r3, [r3, #40]	; 0x28
+ 80001d2:	2b01      	cmp	r3, #1
+ 80001d4:	d111      	bne.n	80001fa <main+0xae>
           setTimer(10, 15); 
- 80001da:	210f      	movs	r1, #15
- 80001dc:	200a      	movs	r0, #10
- 80001de:	f000 fa83 	bl	80006e8 <setTimer>
+ 80001d6:	210f      	movs	r1, #15
+ 80001d8:	200a      	movs	r0, #10
+ 80001da:	f000 fa85 	bl	80006e8 <setTimer>
 
           vertical_shift++;
- 80001e2:	4b0f      	ldr	r3, [pc, #60]	; (8000220 <main+0xd4>)
- 80001e4:	681b      	ldr	r3, [r3, #0]
- 80001e6:	3301      	adds	r3, #1
- 80001e8:	4a0d      	ldr	r2, [pc, #52]	; (8000220 <main+0xd4>)
- 80001ea:	6013      	str	r3, [r2, #0]
+ 80001de:	4b10      	ldr	r3, [pc, #64]	; (8000220 <main+0xd4>)
+ 80001e0:	681b      	ldr	r3, [r3, #0]
+ 80001e2:	3301      	adds	r3, #1
+ 80001e4:	4a0e      	ldr	r2, [pc, #56]	; (8000220 <main+0xd4>)
+ 80001e6:	6013      	str	r3, [r2, #0]
           if (vertical_shift >= 16) {
- 80001ec:	4b0c      	ldr	r3, [pc, #48]	; (8000220 <main+0xd4>)
- 80001ee:	681b      	ldr	r3, [r3, #0]
- 80001f0:	2b0f      	cmp	r3, #15
- 80001f2:	dd02      	ble.n	80001fa <main+0xae>
+ 80001e8:	4b0d      	ldr	r3, [pc, #52]	; (8000220 <main+0xd4>)
+ 80001ea:	681b      	ldr	r3, [r3, #0]
+ 80001ec:	2b0f      	cmp	r3, #15
+ 80001ee:	dd02      	ble.n	80001f6 <main+0xaa>
               vertical_shift = 0; 
- 80001f4:	4b0a      	ldr	r3, [pc, #40]	; (8000220 <main+0xd4>)
- 80001f6:	2200      	movs	r2, #0
- 80001f8:	601a      	str	r2, [r3, #0]
+ 80001f0:	4b0b      	ldr	r3, [pc, #44]	; (8000220 <main+0xd4>)
+ 80001f2:	2200      	movs	r2, #0
+ 80001f4:	601a      	str	r2, [r3, #0]
           }
 
           updateAnimationBuffer(); 
- 80001fa:	f000 f9ed 	bl	80005d8 <updateAnimationBuffer>
+ 80001f6:	f000 f9ef 	bl	80005d8 <updateAnimationBuffer>
       }
 
   
       if (timer_flag[9] == 1) {
- 80001fe:	4b07      	ldr	r3, [pc, #28]	; (800021c <main+0xd0>)
- 8000200:	6a5b      	ldr	r3, [r3, #36]	; 0x24
- 8000202:	2b01      	cmp	r3, #1
- 8000204:	d1c0      	bne.n	8000188 <main+0x3c>
+ 80001fa:	4b08      	ldr	r3, [pc, #32]	; (800021c <main+0xd0>)
+ 80001fc:	6a5b      	ldr	r3, [r3, #36]	; 0x24
+ 80001fe:	2b01      	cmp	r3, #1
+ 8000200:	d1c1      	bne.n	8000186 <main+0x3a>
           setTimer(9, 50); 
- 8000206:	2132      	movs	r1, #50	; 0x32
- 8000208:	2009      	movs	r0, #9
- 800020a:	f000 fa6d 	bl	80006e8 <setTimer>
+ 8000202:	2132      	movs	r1, #50	; 0x32
+ 8000204:	2009      	movs	r0, #9
+ 8000206:	f000 fa6f 	bl	80006e8 <setTimer>
           HAL_GPIO_TogglePin(GPIOA, GPIO_PIN_5); 
- 800020e:	2120      	movs	r1, #32
- 8000210:	4804      	ldr	r0, [pc, #16]	; (8000224 <main+0xd8>)
- 8000212:	f000 fedd 	bl	8000fd0 <HAL_GPIO_TogglePin>
-      for (int i = 0; i < 8; i++) {
- 8000216:	e7b7      	b.n	8000188 <main+0x3c>
- 8000218:	200000bc 	.word	0x200000bc
- 800021c:	2000008c 	.word	0x2000008c
- 8000220:	20000058 	.word	0x20000058
+ 800020a:	2120      	movs	r1, #32
+ 800020c:	4805      	ldr	r0, [pc, #20]	; (8000224 <main+0xd8>)
+ 800020e:	f000 fedf 	bl	8000fd0 <HAL_GPIO_TogglePin>
+      if (timer_flag[flag] == 1) {
+ 8000212:	e7b8      	b.n	8000186 <main+0x3a>
+ 8000214:	200000c0 	.word	0x200000c0
+ 8000218:	20000050 	.word	0x20000050
+ 800021c:	20000090 	.word	0x20000090
+ 8000220:	2000005c 	.word	0x2000005c
  8000224:	40010800 	.word	0x40010800
 
 08000228 <SystemClock_Config>:
@@ -418,7 +417,7 @@ static void MX_TIM2_Init(void)
  800032e:	3718      	adds	r7, #24
  8000330:	46bd      	mov	sp, r7
  8000332:	bd80      	pop	{r7, pc}
- 8000334:	200000bc 	.word	0x200000bc
+ 8000334:	200000c0 	.word	0x200000c0
 
 08000338 <MX_GPIO_Init>:
   * @brief GPIO Initialization Function
@@ -873,8 +872,8 @@ void updateAnimationBuffer(void) {
  8000640:	4770      	bx	lr
  8000642:	bf00      	nop
  8000644:	08001ff0 	.word	0x08001ff0
- 8000648:	20000058 	.word	0x20000058
- 800064c:	20000050 	.word	0x20000050
+ 8000648:	2000005c 	.word	0x2000005c
+ 800064c:	20000054 	.word	0x20000054
 
 08000650 <updateLEDMatrix>:
 
@@ -957,7 +956,7 @@ void updateLEDMatrix(int index) {
  80006d6:	bd80      	pop	{r7, pc}
  80006d8:	08001ff8 	.word	0x08001ff8
  80006dc:	40010800 	.word	0x40010800
- 80006e0:	20000050 	.word	0x20000050
+ 80006e0:	20000054 	.word	0x20000054
  80006e4:	40010c00 	.word	0x40010c00
 
 080006e8 <setTimer>:
@@ -987,8 +986,8 @@ void setTimer(int index, int duration) {
  800070a:	46bd      	mov	sp, r7
  800070c:	bc80      	pop	{r7}
  800070e:	4770      	bx	lr
- 8000710:	2000005c 	.word	0x2000005c
- 8000714:	2000008c 	.word	0x2000008c
+ 8000710:	20000060 	.word	0x20000060
+ 8000714:	20000090 	.word	0x20000090
 
 08000718 <timerRun>:
 
@@ -1042,8 +1041,8 @@ void timerRun(void) {
  800076a:	46bd      	mov	sp, r7
  800076c:	bc80      	pop	{r7}
  800076e:	4770      	bx	lr
- 8000770:	2000005c 	.word	0x2000005c
- 8000774:	2000008c 	.word	0x2000008c
+ 8000770:	20000060 	.word	0x20000060
+ 8000774:	20000090 	.word	0x20000090
 
 08000778 <HAL_TIM_PeriodElapsedCallback>:
 
@@ -1523,7 +1522,7 @@ void TIM2_IRQHandler(void)
  800096a:	bf00      	nop
  800096c:	bd80      	pop	{r7, pc}
  800096e:	bf00      	nop
- 8000970:	200000bc 	.word	0x200000bc
+ 8000970:	200000c0 	.word	0x200000c0
 
 08000974 <SystemInit>:
   * @note   This function should be used only after reset.
@@ -1629,7 +1628,7 @@ LoopFillZerobss:
   ldr r2, =_sbss
  80009c0:	20000020 	.word	0x20000020
   ldr r4, =_ebss
- 80009c4:	20000108 	.word	0x20000108
+ 80009c4:	2000010c 	.word	0x2000010c
 
 080009c8 <ADC1_2_IRQHandler>:
  * @retval : None
@@ -1777,7 +1776,7 @@ __weak void HAL_IncTick(void)
  8000a70:	bc80      	pop	{r7}
  8000a72:	4770      	bx	lr
  8000a74:	2000001c 	.word	0x2000001c
- 8000a78:	20000104 	.word	0x20000104
+ 8000a78:	20000108 	.word	0x20000108
 
 08000a7c <HAL_GetTick>:
   * @note  This function is declared as __weak to be overwritten in case of other
@@ -1796,7 +1795,7 @@ __weak uint32_t HAL_GetTick(void)
  8000a86:	46bd      	mov	sp, r7
  8000a88:	bc80      	pop	{r7}
  8000a8a:	4770      	bx	lr
- 8000a8c:	20000104 	.word	0x20000104
+ 8000a8c:	20000108 	.word	0x20000108
 
 08000a90 <__NVIC_SetPriorityGrouping>:
            In case of a conflict between priority grouping and available

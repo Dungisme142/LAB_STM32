@@ -51,6 +51,7 @@ int second = 50;
 int led_buffer[4] = {0, 0, 0, 0}; // Mảng đệm chứa 4 số của đồng hồ
 int index_led = 0;
 
+int flag = 0;
 // Các biến đếm thời gian trực tiếp trong ngắt (BÀI 5)
 int timer_clock_count = 100; // 100 * 10ms = 1000ms (1 giây tăng biến second)
 int timer_led_scan = 25;      // Quét LED 7 đoạn mượt mỗi 250ms
@@ -128,18 +129,15 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
-
-      for (int i = 0; i < 8; i++) {
-          if (timer_flag[i] == 1) {
-              updateLEDMatrix(i); 
-              timer_flag[i] = 0;
-
-            
-              int next_col = (i + 1) % 8;
-              setTimer(next_col, 1);
-          }
-      }
+      if (timer_flag[flag] == 1) {
+              updateLEDMatrix(flag); 
+              timer_flag[flag] = 0;
+              flag++;
+              if(flag == 8){
+                flag = 0;
+              }
+              setTimer(flag, 1);
+        }
 
 
       if (timer_flag[10] == 1) {
